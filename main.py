@@ -11,7 +11,7 @@ _contacts = [
 app = Sanic("contacts")
 
 
-@app.post('/')
+@app.post('/contacts')
 async def create_contact(request):
     """Creates a contact"""
     try:
@@ -32,13 +32,13 @@ async def create_contact(request):
         return empty(400)
 
 
-@app.get('/')
+@app.get('/contacts/')
 async def get_all_contacts(request):
     """Gets all contacts"""
     return json(_contacts)
 
 
-@app.get('/<id>')
+@app.get('/contacts/<id>')
 async def get_contact(request, id):
     """Gets a specific contact"""
     _, contact = find_contact(id)
@@ -48,7 +48,7 @@ async def get_contact(request, id):
     return json(contact)
 
 
-@app.put('/<id>')
+@app.put('/contacts/<id>')
 async def update_contact(request, id):
     """Updates a contact"""
     i, _ = find_contact(id)
@@ -69,7 +69,7 @@ async def update_contact(request, id):
         return empty(400)
 
 
-@app.delete('/<id>')
+@app.delete('/contacts/<id>')
 async def delete_contact(request, id):
     """Deletes a contact"""
     i, contact = find_contact(id)
