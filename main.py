@@ -1,31 +1,56 @@
+import os
 import uuid
 
 from sanic import Sanic
 from sanic.response import json, empty
+from pony.orm import *
+from dotenv import load_dotenv
 
-_contacts = [
-    {'Id': str(uuid.uuid4()), 'firstName': "Albert", 'lastName': "Einstein", 'phoneNumber': "2222-1111"},
-    {'Id': str(uuid.uuid4()), 'firstName': "Mary", 'lastName': "Curie", 'phoneNumber': "1111-1111"}
-]
+# configuration --------------
+load_dotenv()
 
+# DB_LOCATION=contacts.db
+# ENVIRONMENT=development
+environment = os.getenv("ENVIRONMENT")
+db_location = os.getenv("DB_LOCATION")
+
+# database --------------
+if environment != 'production':
+    set_sql_debug(True)
+
+db = Database()
+
+
+class Contact(db.Entity):
+    id = PrimaryKey(str)
+    firstName = Required(str)
+    lastName = Required(str)
+    phoneNumber = Required(str)
+
+
+db.bind(provider='sqlite', filename=db_location, create_db=True)
+db.generate_mapping(create_tables=True)
+
+# api --------------
 app = Sanic("contacts")
 
 
 @app.post('/contacts')
-async def create_contact(request):
+@db_session
+def create_contact(request):
     """Creates a contact"""
     try:
         try:
-            contact = request.json
+            contact_payload = request.json
         except:
             raise ValueError
-        if contact is None:
+        if contact_payload is None:
             raise ValueError
 
         id = str(uuid.uuid4())
-        contact['Id'] = id
 
-        _contacts.append(contact)
+        Contact(id=id, firstName=contact_payload['firstName'], lastName=contact_payload['lastName'],
+                phoneNumber=contact_payload['phoneNumber'])
 
         return empty(201, {'Location': f"/{id}"})
     except ValueError:
@@ -33,58 +58,68 @@ async def create_contact(request):
 
 
 @app.get('/contacts/')
-async def get_all_contacts(request):
+@db_session
+def get_all_contacts(_):
     """Gets all contacts"""
-    return json(_contacts)
+    contacts_payload = []
+
+    contacts = select(c for c in Contact)
+    for c in contacts:
+        contacts_payload.append(c.to_dict())
+
+    return json(contacts_payload)
 
 
 @app.get('/contacts/<id>')
-async def get_contact(request, id):
+@db_session
+def get_contact(_, id):
     """Gets a specific contact"""
-    _, contact = find_contact(id)
-    if not contact:
+    try:
+        contact = Contact[id]
+    except ObjectNotFound:
         return empty(404)
 
-    return json(contact)
+    return json(contact.to_dict())
 
 
 @app.put('/contacts/<id>')
-async def update_contact(request, id):
+@db_session
+def update_contact(request, id):
     """Updates a contact"""
-    i, _ = find_contact(id)
-    if i == -1:
+    try:
+        contact = Contact[id]
+    except ObjectNotFound:
         return empty(404)
 
     try:
         try:
-            contact = request.json
+            contact_payload = request.json
         except:
             raise ValueError
-        if contact is None:
+        if contact_payload is None:
             raise ValueError
 
-        _contacts[i] = contact
+        contact.firstName = contact_payload['firstName']
+        contact.lastName = contact_payload['lastName']
+        contact.phoneNumber = contact_payload['phoneNumber']
+
         return empty(204)
     except ValueError:
         return empty(400)
 
 
 @app.delete('/contacts/<id>')
-async def delete_contact(request, id):
+@db_session
+def delete_contact(_, id):
     """Deletes a contact"""
-    i, contact = find_contact(id)
-    if not contact:
+    try:
+        contact = Contact[id]
+    except ObjectNotFound:
         return empty(404)
 
-    del _contacts[i]
+    contact.delete()
+
     return empty(204)
-
-
-def find_contact(id):
-    for i in range(len(_contacts)):
-        if _contacts[i]['Id'] == id:
-            return i, _contacts[i]
-    return -1, None
 
 
 if __name__ == "__main__":

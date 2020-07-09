@@ -18,3 +18,4 @@ tests/.pytest_cache
 # misc
 .dockerignore
 README.md
+contacts.db

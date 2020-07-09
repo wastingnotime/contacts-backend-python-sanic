@@ -1,2 +1,4 @@
 sanic~=20.3.0
 pytest~=5.4.3
+pony~=0.7.13
+python-dotenv~=0.14.0
