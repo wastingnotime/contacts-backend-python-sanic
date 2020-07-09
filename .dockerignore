@@ -1,3 +1,20 @@
-venv
+# git
+.git
 .gitignore
+
+# idea
+.idea
+
+# py dev
+venv
+
+# caches
+__pycache__
 tests/.pytest_cache
+
+# dev config
+.env
+
+# misc
+.dockerignore
+README.md
