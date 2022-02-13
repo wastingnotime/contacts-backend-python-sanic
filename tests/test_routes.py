@@ -1,27 +1,24 @@
 import pytest
 from main import app
 
+# https://sanic.dev/en/plugins/sanic-testing/getting-started.html
 
-# https://sanic.readthedocs.io/en/latest/sanic/testing.html
-# https://stackoverflow.com/questions/56594314/asynchronously-unit-testing-a-sanic-app-throws-runtimeerror-this-event-loop-is
 
 @pytest.yield_fixture
 def sanic_app():
     yield app
 
 
-@pytest.fixture
-def test_cli(loop, sanic_app, sanic_client):
-    return loop.run_until_complete(sanic_client(app))
+@pytest.mark.asyncio
+async def test_get_contact_returns_200(sanic_app):
+    request, response = await sanic_app.asgi_client.get('/contacts')
+    assert request.method.lower() == "get"
+    assert response.status == 200
+    #assert len(response.json) == 2
 
 
-async def test_get_contact_returns_200(test_cli):
-    resp = await test_cli.get('/')
-    assert resp.status == 200
-    json = await resp.json()
-    assert len(json) == 2
-
-
-async def test_get_contact_1_returns_404(test_cli):
-    resp = await test_cli.get('/1')
-    assert resp.status == 404
+@pytest.mark.asyncio
+async def test_get_contact_1_returns_404(sanic_app):
+    request, response = await sanic_app.asgi_client.get('/1')
+    assert request.method.lower() == "get"
+    assert response.status == 404
