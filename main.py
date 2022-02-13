@@ -8,9 +8,6 @@ from dotenv import load_dotenv
 
 # configuration --------------
 load_dotenv()
-
-# DB_LOCATION=contacts.db
-# ENVIRONMENT=development
 environment = os.getenv("ENVIRONMENT")
 db_location = os.getenv("DB_LOCATION")
 
