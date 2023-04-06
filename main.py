@@ -2,6 +2,7 @@ import os
 import uuid
 
 from sanic import Sanic
+from sanic.exceptions import BadRequest
 from sanic.response import json, empty
 from pony.orm import *
 from dotenv import load_dotenv
@@ -10,11 +11,10 @@ from dotenv import load_dotenv
 load_dotenv()
 environment = os.getenv("ENVIRONMENT")
 db_location = os.getenv("DB_LOCATION")
+is_debug = (environment != 'production')
 
 # database --------------
-if environment != 'production':
-    set_sql_debug(True)
-
+set_sql_debug(is_debug)
 db = Database()
 
 
@@ -37,24 +37,33 @@ app = Sanic("contacts")
 def create_contact(request):
     """Creates a contact"""
     try:
-        try:
-            contact_payload = request.json
-        except:
-            raise ValueError
-        if contact_payload is None:
-            raise ValueError
+        contact_payload = request.json
+    except BadRequest:
+        return json({"error": "bad formatted json payload"}, status=400)
 
-        id = str(uuid.uuid4())
+    if contact_payload is None or contact_payload == {}:
+        return json({"error": "bad formatted json payload"}, status=400)
+    if contact_payload.get('firstName') is None:
+        return json({"error": "firstName must be informed"}, status=400)
+    if contact_payload.get('lastName') is None:
+        return json({"error": "lastName must be informed"}, status=400)
+    if contact_payload.get('phoneNumber') is None:
+        return json({"error": "phoneNumber must be informed"}, status=400)
 
-        Contact(id=id, firstName=contact_payload['firstName'], lastName=contact_payload['lastName'],
+    try:
+        contact_id = str(uuid.uuid4())
+
+        Contact(id=contact_id,
+                firstName=contact_payload['firstName'],
+                lastName=contact_payload['lastName'],
                 phoneNumber=contact_payload['phoneNumber'])
 
-        return empty(201, {'Location': f"/{id}"})
+        return empty(201, {'Location': f"{request.path}/{contact_id}"})
     except ValueError:
-        return empty(400)
+        return empty(500)
 
 
-@app.get('/contacts/')
+@app.get('/contacts')
 @db_session
 def get_all_contacts(_):
     """Gets all contacts"""
@@ -67,50 +76,57 @@ def get_all_contacts(_):
     return json(contacts_payload)
 
 
-@app.get('/contacts/<id>')
+@app.get('/contacts/<contact_id>')
 @db_session
-def get_contact(_, id):
+def get_contact(_, contact_id):
     """Gets a specific contact"""
     try:
-        contact = Contact[id]
+        contact = Contact[contact_id]
     except ObjectNotFound:
         return empty(404)
 
     return json(contact.to_dict())
 
 
-@app.put('/contacts/<id>')
+@app.put('/contacts/<contact_id>')
 @db_session
-def update_contact(request, id):
+def update_contact(request, contact_id):
     """Updates a contact"""
     try:
-        contact = Contact[id]
+        contact = Contact[contact_id]
     except ObjectNotFound:
         return empty(404)
 
     try:
-        try:
-            contact_payload = request.json
-        except:
-            raise ValueError
-        if contact_payload is None:
-            raise ValueError
+        contact_payload = request.json
+    except BadRequest:
+        return json({"error": "bad formatted json payload"}, status=400)
 
+    if contact_payload is None or contact_payload == {}:
+        return json({"error": "bad formatted json payload"}, status=400)
+    if contact_payload.get('firstName') is None:
+        return json({"error": "firstName must be informed"}, status=400)
+    if contact_payload.get('lastName') is None:
+        return json({"error": "lastName must be informed"}, status=400)
+    if contact_payload.get('phoneNumber') is None:
+        return json({"error": "phoneNumber must be informed"}, status=400)
+
+    try:
         contact.firstName = contact_payload['firstName']
         contact.lastName = contact_payload['lastName']
         contact.phoneNumber = contact_payload['phoneNumber']
 
         return empty(204)
     except ValueError:
-        return empty(400)
+        return empty(500)
 
 
-@app.delete('/contacts/<id>')
+@app.delete('/contacts/<contact_id>')
 @db_session
-def delete_contact(_, id):
+def delete_contact(_, contact_id):
     """Deletes a contact"""
     try:
-        contact = Contact[id]
+        contact = Contact[contact_id]
     except ObjectNotFound:
         return empty(404)
 
@@ -120,4 +136,4 @@ def delete_contact(_, id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8010)
+    app.run(host="0.0.0.0", port=8010, debug=is_debug, auto_reload=is_debug)
