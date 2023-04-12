@@ -10,5 +10,6 @@ VOLUME data
 
 ENV DB_LOCATION=/data/contacts.db
 ENV ENVIRONMENT=production
+ENV API_PORT=8010
 
 CMD ["python", "main.py"]

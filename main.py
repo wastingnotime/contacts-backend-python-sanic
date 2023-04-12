@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 environment = os.getenv("ENVIRONMENT")
 db_location = os.getenv("DB_LOCATION")
+api_port = os.getenv("API_PORT")
 is_debug = (environment != 'production')
 
 # database --------------
@@ -136,4 +137,4 @@ def delete_contact(_, contact_id):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8010, debug=is_debug, auto_reload=is_debug)
+    app.run(host="0.0.0.0", port=int(api_port), debug=is_debug, auto_reload=is_debug)
